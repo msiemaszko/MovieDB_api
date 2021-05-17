@@ -83,4 +83,5 @@ MANIFEST.in
 pip-wheel-metadata
 /poetry.toml
 
-.db
+*.db
+sql_app.db
