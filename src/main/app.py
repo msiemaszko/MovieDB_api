@@ -54,17 +54,16 @@ async def user_login(
 ):
     # """ GET: Return all user """
     db_user = crud.user.get_user_by_email(db, email=user.email)
-    if db_user.hashed_password == hash_password(user.password):
-        token = signJWT(user.email).access_token
-        user = {
-            "id": db_user.id,
-            "full_name": db_user.full_name,
-            "email": db_user.email,
-        }
-        return schemas.user.UserTokenizedSchema(user=user, access_token=token)
-    raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST, detail="Wrong login details!"
-    )
+    if db_user:
+        if db_user.hashed_password == hash_password(user.password):
+            token = signJWT(user.email).access_token
+            user = {
+                "id": db_user.id,
+                "full_name": db_user.full_name,
+                "email": db_user.email,
+            }
+            return schemas.user.UserTokenizedSchema(user=user, access_token=token)
+    raise HTTPException(tatus_code=status.HTTP_400_BAD_REQUEST, detail="Wrong login details!")
 
 
 @app.get("/users", tags=["user"], response_model=List[schemas.user.UserSchema])

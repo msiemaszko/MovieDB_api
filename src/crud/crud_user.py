@@ -14,7 +14,10 @@ class CRUDUser:
         Returns:
             user: user object
         """
-        return db.query(User).filter(User.id == user_id).first()
+        try:
+            return db.query(User).filter(User.id == user_id).first()
+        except:
+            return None;
 
     def get_user_by_email(self, db: Session, email: str) -> User:
         """Return user based on email"""
