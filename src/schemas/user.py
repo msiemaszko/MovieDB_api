@@ -1,27 +1,18 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field, EmailStr
 
-class ItemBase(BaseModel):
-    title: str
-    description: Optional[str] = None
+from pydantic import BaseModel, EmailStr, Field
 
-class ItemCreate(ItemBase):
-    pass
-
-class Item(ItemBase):
-    id: int
-    owner_id: int
-
-    class Config:
-        orm_mode = True
+from src.schemas.item import Item
 
 
 class UserBaseSchema(BaseModel):
     full_name: str
     email: EmailStr
 
+
 class UserCreateSchema(UserBaseSchema):
     password: str
+
 
 class UserSchema(UserBaseSchema):
     id: int
@@ -30,6 +21,12 @@ class UserSchema(UserBaseSchema):
 
     class Config:
         orm_mode = True
+
+
+class UserTokenizedSchema(BaseModel):
+    user: Optional[dict]
+    access_token: Optional[str]
+
 
 class UserLoginSchema(BaseModel):
     email: EmailStr = Field(...)
