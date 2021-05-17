@@ -2,15 +2,21 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
-# SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
+from src.consts.db_const import SQLALCHEMY_DATABASE_URL
 
-engine = create_engine(
+db_engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-base = declarative_base()
+session_local = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
 
-# Apply migrations to db and populate it
-base.metadata.create_all(bind=engine)
+db_base = declarative_base()
+
+
+# Dependencies
+def get_db():
+    db = session_local()
+    try:
+        yield db
+    finally:
+        db.close()

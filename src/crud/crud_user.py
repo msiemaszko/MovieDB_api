@@ -9,7 +9,11 @@ from src.schemas.user import UserCreateSchema
 
 class CRUDUser:
     def get_user(self, db: Session, user_id: int) -> Optional[User]:
-        """Return user based on primary key"""
+        """
+        Return user based on primary key
+        Returns:
+            user: user object
+        """
         return db.query(User).filter(User.id == user_id).first()
 
     def get_user_by_email(self, db: Session, email: str) -> User:

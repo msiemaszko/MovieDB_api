@@ -8,9 +8,14 @@ from sqlalchemy.orm import Session
 from src import crud, models, schemas
 from src.auth.auth_bearer import JWTBearer
 from src.auth.auth_handler import hash_password, signJWT
-from src.database.dependency import get_db
+from src.database import db_base, db_engine, get_db, session_local
+
+# Apply migrations to db and populate it
+db_base.metadata.create_all(bind=db_engine)
 
 app = FastAPI()
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -26,7 +31,6 @@ app.add_middleware(
 @app.post("/signup", tags=["user"], response_model=schemas.user.UserTokenizedSchema)
 def create_user(user: schemas.user.UserCreateSchema, db: Session = Depends(get_db)):
     """POST: Register new user"""
-
     db_user = crud.user.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(
