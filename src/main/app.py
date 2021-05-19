@@ -14,8 +14,6 @@ from src.database import db_base, db_engine, get_db, session_local
 db_base.metadata.create_all(bind=db_engine)
 
 app = FastAPI()
-
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
