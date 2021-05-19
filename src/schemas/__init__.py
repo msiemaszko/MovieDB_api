@@ -1,10 +1,11 @@
 from .token import Token
 from .user import (
     BaseModel,
-    Item,
+    # Item,
     UserBaseSchema,
     UserCreateSchema,
     UserLoginSchema,
     UserSchema,
     UserTokenizedSchema,
 )
+from .rating import Rating

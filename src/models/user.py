@@ -9,8 +9,8 @@ class User(db_base):
 
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String)
-    email = Column(String, unique=True, index=True)
+    email = Column(String) #, unique=True, index=True
     hashed_password = Column(String)
     is_active = Column(Boolean, default=True)
 
-    items = relationship("Item", back_populates="owner")
+    rates = relationship("Rating", back_populates="owner")

@@ -81,6 +81,24 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
         )
     return db_user
 
+@app.get("/ratings/", tags=["ratings"], response_model=List[schemas.rating.Rating])
+def read_ratings(
+        skip: int = 0,
+        limit: int = 100,
+        db: Session = Depends(get_db)
+):
+    ratings = crud.rates.get_ratings(db)
+    return ratings
+
+
+# @app.post("/users/{user_id}/rating/", response_model=schemas.Item)
+# def create_item_for_user(
+#         user_id: int,
+#         item: schemas.ItemCreate,
+#         db: Session = Depends(get_db)
+# ):
+#     return crud.create_user_item(db=db, item=item, user_id=user_id)
+
 
 @app.get("/test", tags=["test"])
 async def test_get_no_protected():

@@ -18,7 +18,7 @@ class Rating(db_base):
     __table_args__ = (UniqueConstraint('user_id', 'movie_id'),)
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    movie_id = Column(Float, ForeignKey("movies.id"))
+    movie_id = Column(Integer, ForeignKey("movies.id"))
     rating = Column(Float)
     time_stamp = Column(String)
 
