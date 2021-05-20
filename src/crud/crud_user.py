@@ -17,7 +17,7 @@ class CRUDUser:
         try:
             return db.query(User).filter(User.id == user_id).first()
         except:
-            return None;
+            return None
 
     def get_user_by_email(self, db: Session, email: str) -> User:
         """Return user based on email"""

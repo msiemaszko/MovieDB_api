@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from src import crud, models, schemas
 from src.auth.auth_bearer import JWTBearer
 from src.auth.auth_handler import hash_password, signJWT
-from src.database import db_base, db_engine, get_db, session_local
+from src.database import db_base, db_engine, db_session, get_db
 
 # Apply migrations to db and populate it
 db_base.metadata.create_all(bind=db_engine)
@@ -61,7 +61,9 @@ async def user_login(
                 "email": db_user.email,
             }
             return schemas.user.UserTokenizedSchema(user=user, access_token=token)
-    raise HTTPException(tatus_code=status.HTTP_400_BAD_REQUEST, detail="Wrong login details!")
+    raise HTTPException(
+        tatus_code=status.HTTP_400_BAD_REQUEST, detail="Wrong login details!"
+    )
 
 
 @app.get("/users", tags=["user"], response_model=List[schemas.user.UserSchema])
@@ -81,43 +83,46 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
         )
     return db_user
 
+
 @app.get("/ratings/", tags=["ratings"], response_model=List[schemas.rating.Rating])
-def read_ratings(
-        skip: int = 0,
-        limit: int = 100,
-        db: Session = Depends(get_db)
-):
+def read_ratings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     ratings = crud.rates.get_ratings(db)
     return ratings
 
 
-# @app.post("/users/{user_id}/rating/", response_model=schemas.Item)
-# def create_item_for_user(
-#         user_id: int,
-#         item: schemas.ItemCreate,
-#         db: Session = Depends(get_db)
-# ):
-#     return crud.create_user_item(db=db, item=item, user_id=user_id)
+@app.get("/movies/", tags=["movies"], response_model=List[schemas.movie.Movie])
+def read_movies(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    movies = crud.movies.get_movies(db=db, skip=skip, limit=limit)
+    return movies
+
+
+@app.post(
+    "/movies/{movie_id}/rating/", tags=["ratings"], response_model=schemas.rating.Rating
+)
+def create_rating_for_movie(
+    movie_id: int, rating: schemas.rating.RatingCreate, db: Session = Depends(get_db)
+):
+    return crud.rates.create_user_rating(db=db, rating=rating, movie_id=movie_id)
 
 
 @app.get("/test", tags=["test"])
 async def test_get_no_protected():
-    return {"data": "GET: no protected data"}
+    return {"dump": "GET: no protected dump"}
 
 
 @app.post("/test", tags=["test"])
 async def test_post_no_protected():
-    return {"data": "POST: no protected data"}
+    return {"dump": "POST: no protected dump"}
 
 
 @app.get("/protected", dependencies=[Depends(JWTBearer())], tags=["test"])
 async def test_protected():
-    return {"data": "GET: something protected"}
+    return {"dump": "GET: something protected"}
 
 
 @app.post("/protected", dependencies=[Depends(JWTBearer())], tags=["test"])
 async def test_protected():
-    return {"data": "POST: something protected"}
+    return {"dump": "POST: something protected"}
 
 
 # @app.post("/users/{user_id}/items/", response_model=schemas.Item)

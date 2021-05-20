@@ -4,7 +4,8 @@ import time
 
 import jwt
 
-from src.consts.auth_const import JWT_ALGORITHM, JWT_EXPIRE_TIME, JWT_SECRET_KEY
+from src.consts.auth_const import (JWT_ALGORITHM, JWT_EXPIRE_TIME,
+                                   JWT_SECRET_KEY)
 from src.schemas.token import Token
 
 # JWT_SECRET = config("secret")

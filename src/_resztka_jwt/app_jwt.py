@@ -1,9 +1,9 @@
 import uvicorn
 from fastapi import Body, Depends, FastAPI
 
+from src._test_jwt.schemas_jwt import PostSchema, UserLoginSchema, UserSchema
 from src.auth.auth_bearer import JWTBearer
 from src.auth.auth_handler import signJWT
-from src.schemas.schemas_jwt import PostSchema, UserLoginSchema, UserSchema
 
 posts = [{"id": 1, "title": "Pancake", "content": "Lorem Ipsum ..."}]
 users = []
@@ -20,7 +20,7 @@ async def read_root() -> dict:
 
 @app.get("/posts", tags=["posts"])
 async def get_posts() -> dict:
-    return {"data": posts}
+    return {"dump": posts}
 
 
 @app.get("/posts/{id}", tags=["posts"])
@@ -30,7 +30,7 @@ async def get_single_post(id: int) -> dict:
 
     for post in posts:
         if post["id"] == id:
-            return {"data": post}
+            return {"dump": post}
 
 
 # creating new post
@@ -38,7 +38,7 @@ async def get_single_post(id: int) -> dict:
 async def add_post(post: PostSchema) -> dict:
     post.id = len(posts) + 1
     posts.append(post.dict())
-    return {"data": "post added."}
+    return {"dump": "post added."}
 
 
 # user registration

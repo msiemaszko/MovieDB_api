@@ -8,14 +8,14 @@ db_engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
 
-session_local = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
+db_session = sessionmaker(autocommit=False, autoflush=False, bind=db_engine)
 
 db_base = declarative_base()
 
 
 # Dependencies
 def get_db():
-    db = session_local()
+    db = db_session()
     try:
         yield db
     finally:

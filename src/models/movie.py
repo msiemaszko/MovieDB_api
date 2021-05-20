@@ -1,9 +1,11 @@
-from sqlalchemy import Column, Integer, Date, String
+from sqlalchemy import Column, Date, Integer, String, Float
 from sqlalchemy.orm import relationship
+
 from src.database import db_base
 
-class Movie(db_base):
-    __tablename__ = 'movies'
+
+class Movie(db_base):  # parrent
+    __tablename__ = "movies"
 
     id = Column(Integer, primary_key=True)
     imdb_id = Column(String)
@@ -11,5 +13,9 @@ class Movie(db_base):
     genres = Column(String)
     release_date = Column(Date)
     overview = Column(String)
+    vote_average = Column(Float)
+    vote_count = Column(Integer)
+    poster_path = Column(String)
 
-    rates = relationship("Rating", back_populates="to")
+    # bidirectional relationship in one-to-many
+    rates = relationship("Rating", back_populates="movie")

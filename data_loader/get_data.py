@@ -1,27 +1,50 @@
 from ast import literal_eval
+
 import pandas as pd
 
-# movie_csv = "data/movies.csv"
-movie_csv = "data/movies_metadata_top10.csv"
-rating_csv = "data/ratings_top.csv"
-users_csv = "data/users.csv"
+# movie_csv = "dump/movies.csv"
+movie_csv = "data_loader/dump/movies_metadata_top10.csv"
+# movie_csv = "data_loader/dump/movies_full.csv"
+rating_csv = "data_loader/dump/ratings_top.csv"
+users_csv = "data_loader/dump/users.csv"
+
 
 def read_clear_movies():
     df = pd.read_csv(movie_csv)
-    df = pd.DataFrame(df, columns=['id', 'imdb_id', 'title', 'genres', 'release_date', 'overview', 'poster_path'])
+    df = pd.DataFrame(
+        df,
+        columns=[
+            "id",
+            "imdb_id",
+            "title",
+            "genres",
+            "release_date",
+            "overview",
+            "vote_average",
+            "vote_count",
+            "poster_path",
+        ],
+    )
 
-    df = df.sort_values('id')
+    # sortowanie
+    df = df.sort_values("id")
 
-    df['genres'] = df['genres'].fillna('[]').apply(literal_eval).apply(lambda x: [i['name'] for i in x] if isinstance(x, list) else [])
-    df['genres'] = df['genres'].str.join("|")
+    # transformuj gatunek
+    df["genres"] = (
+        df["genres"]
+        .fillna("[]")
+        .apply(literal_eval)
+        .apply(lambda x: [i["name"] for i in x] if isinstance(x, list) else [])
+    )
+    df["genres"] = df["genres"].str.join("|")
 
-    df['release_date'] = df['release_date'].apply(pd.to_datetime)
-    df['year'] = pd.DatetimeIndex(df['release_date']).year
-
-    df['title'] = df['title'] + " (" + df['year'].astype(str) + ")"
+    # dodaj rok do tytułu
+    df["release_date"] = df["release_date"].apply(pd.to_datetime)
+    df["year"] = pd.DatetimeIndex(df["release_date"]).year
+    df["title"] = df["title"] + " (" + df["year"].astype(str) + ")"
 
     # df.drop('release_date', axis='columns', inplace=True);
-    df.drop('year', axis='columns', inplace=True);
+    df.drop("year", axis="columns", inplace=True)
     return df
 
 
@@ -29,14 +52,15 @@ def read_rating():
     df = pd.read_csv(rating_csv)
     return df
 
+
 def read_users():
-    df = pd.read_csv(users_csv, sep=';')
-    return df;
+    df = pd.read_csv(users_csv, sep=";")
+    return df
+
 
 # pp = read_clear_movies("movies_metadata_top10.csv")
 # pp = pp.values
 # print(pp[6])
-
 
 
 # from datetime import datetime
