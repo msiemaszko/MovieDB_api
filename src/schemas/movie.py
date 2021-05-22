@@ -3,20 +3,21 @@ from typing import List, Optional
 from pydantic import BaseModel, EmailStr, Field
 from pydantic.schema import date
 
-from src.schemas.rating import Rating
+from src.schemas.rating import RatingSchema
 
 
-class Movie(BaseModel):
+class MovieSchema(BaseModel):
     id: int
     imdb_id: str
     title: str
     genres: str
-    release_date: date
-    overview: str
-    vote_average: float
-    vote_count: int
+    release_date: Optional[date]
+    overview: Optional[str]
+    vote_average: Optional[float]
+    vote_count: Optional[int]
+    user_rate: Optional[RatingSchema]
 
-    rates: List[Rating] = []
+    # rates: List[Rating] = []
 
     class Config:
         orm_mode = True

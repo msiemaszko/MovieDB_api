@@ -1,12 +1,13 @@
 from pydantic import BaseModel, EmailStr, Field
 
 
-class RatingCreate(BaseModel):
+class RatingCreateSchema(BaseModel):
+    movie_id: int
     user_id: int
     rating: float
 
 
-class Rating(BaseModel):
+class RatingSchema(BaseModel):
     id: int
     user_id: int
     movie_id: int

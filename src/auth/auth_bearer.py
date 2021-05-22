@@ -1,11 +1,14 @@
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from .auth_handler import decodeJWT
+from .auth_handler import decode_jwt
 
 
-# JWTBearer class is a subclass of FastAPI's HTTPBearer class that will be used to persist authentication on our routes.
 class JWTBearer(HTTPBearer):
+    """
+    that class will be used to persist authentication on our routes
+    """
+
     def __init__(self, auto_error: bool = True):
         super(JWTBearer, self).__init__(auto_error=auto_error)
 
@@ -16,23 +19,25 @@ class JWTBearer(HTTPBearer):
         if credentials:
             if not credentials.scheme == "Bearer":
                 raise HTTPException(
-                    status_code=403, detail="Invalid authentication scheme."
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Invalid authentication scheme.",
                 )
             if not self.verify_jwt(credentials.credentials):
                 raise HTTPException(
-                    status_code=403, detail="Invalid token or expired token."
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Invalid token or expired token.",
                 )
             return credentials.credentials
         else:
-            raise HTTPException(status_code=403, detail="Invalid authorization code.")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid authorization code.",
+            )
 
-    def verify_jwt(self, jwtoken: str) -> bool:
-        isTokenValid: bool = False
-
+    def verify_jwt(self, jwt_token: str) -> bool:
         try:
-            payload = decodeJWT(jwtoken)
+            decode_jwt(jwt_token)
         except:
-            payload = None
-        if payload:
-            isTokenValid = True
-        return isTokenValid
+            return False
+        finally:
+            return True

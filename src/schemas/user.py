@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
-from src.schemas.rating import Rating
+from src.schemas.rating import RatingSchema
 
 
 class UserBaseSchema(BaseModel):
@@ -13,7 +13,7 @@ class UserBaseSchema(BaseModel):
 class UserSchema(UserBaseSchema):
     id: int
     is_active: bool
-    rates: List[Rating] = []
+    rates: List[RatingSchema] = []
 
     class Config:
         orm_mode = True

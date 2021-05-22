@@ -5,10 +5,13 @@ from fastapi import Body, Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from src import crud, models, schemas
-from src.auth.auth_bearer import JWTBearer
-from src.auth.auth_handler import hash_password, signJWT
+from src.auth import JWTBearer, hash_password, sign_jwt
+from src.crud import crud_movies, crud_rates, crud_user
 from src.database import db_base, db_engine, db_session, get_db
+from src.schemas.movie import MovieSchema
+from src.schemas.rating import RatingCreateSchema, RatingSchema
+from src.schemas.user import (UserCreateSchema, UserLoginSchema, UserSchema,
+                              UserTokenizedSchema)
 
 # Apply migrations to db and populate it
 db_base.metadata.create_all(bind=db_engine)
@@ -26,57 +29,58 @@ app.add_middleware(
 )
 
 
-@app.post("/signup", tags=["user"], response_model=schemas.user.UserTokenizedSchema)
-def create_user(user: schemas.user.UserCreateSchema, db: Session = Depends(get_db)):
+@app.post("/signup", tags=["user"], response_model=UserTokenizedSchema)
+def create_user(user: UserCreateSchema, db: Session = Depends(get_db)):
     """POST: Register new user"""
-    db_user = crud.user.get_user_by_email(db, email=user.email)
+    db_user = crud_user.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
-    new_user = crud.user.create_user(db=db, new_user=user)
+    new_user = crud_user.create_user(db=db, new_user=user)
     if new_user:
-        token = signJWT(new_user.email).access_token
+        token = sign_jwt(new_user.email).access_token
         user = {
             "id": new_user.id,
             "full_name": new_user.full_name,
             "email": new_user.email,
         }
-        return schemas.user.UserTokenizedSchema(user=user, access_token=token)
+        return UserTokenizedSchema(user=user, access_token=token)
         # return signJWT(new_user.email)
 
 
-@app.post("/login", tags=["user"], response_model=schemas.user.UserTokenizedSchema)
+@app.post("/login", tags=["user"], response_model=UserTokenizedSchema)
 async def user_login(
-    user: schemas.user.UserLoginSchema = Body(...), db: Session = Depends(get_db)
+    user: UserLoginSchema = Body(...),
+    db: Session = Depends(get_db)
 ):
     # """ GET: Return all user """
-    db_user = crud.user.get_user_by_email(db, email=user.email)
+    db_user = crud_user.get_user_by_email(db, email=user.email)
     if db_user:
         if db_user.hashed_password == hash_password(user.password):
-            token = signJWT(user.email).access_token
+            token = sign_jwt(user.email).access_token
             user = {
                 "id": db_user.id,
                 "full_name": db_user.full_name,
                 "email": db_user.email,
             }
-            return schemas.user.UserTokenizedSchema(user=user, access_token=token)
+            return UserTokenizedSchema(user=user, access_token=token)
     raise HTTPException(
-        tatus_code=status.HTTP_400_BAD_REQUEST, detail="Wrong login details!"
+        status_code=status.HTTP_400_BAD_REQUEST, detail="Wrong login details!"
     )
 
 
-@app.get("/users", tags=["user"], response_model=List[schemas.user.UserSchema])
+@app.get("/users", tags=["user"], response_model=List[UserSchema])
 def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """GET: Return all user with pagination arguments"""
-    users = crud.user.get_users(db, skip=skip, limit=limit)
+    users = crud_user.get_users(db, skip=skip, limit=limit)
     return users
 
 
-@app.get("/users/{user_id}", tags=["user"], response_model=schemas.user.UserSchema)
+@app.get("/users/{user_id}", tags=["user"], response_model=UserSchema)
 def read_user(user_id: int, db: Session = Depends(get_db)):
     """GET: Return specific user by id"""
-    db_user = crud.user.get_user(db, user_id=user_id)
+    db_user = crud_user.get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
@@ -84,25 +88,32 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
     return db_user
 
 
-@app.get("/ratings/", tags=["ratings"], response_model=List[schemas.rating.Rating])
+@app.get(
+    "/ratings/", tags=["ratings"], response_model=List[RatingSchema]
+)
 def read_ratings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    ratings = crud.rates.get_ratings(db)
+    ratings = crud_rates.get_ratings(db)
     return ratings
 
 
-@app.get("/movies/", tags=["movies"], response_model=List[schemas.movie.Movie])
+@app.get("/movies/", tags=["movies"], response_model=List[MovieSchema])
 def read_movies(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    movies = crud.movies.get_movies(db=db, skip=skip, limit=limit)
+    movies = crud_movies.get_movies(db=db, skip=skip, limit=limit)
     return movies
 
 
-@app.post(
-    "/movies/{movie_id}/rating/", tags=["ratings"], response_model=schemas.rating.Rating
+@app.get("/movies/{searchStr}", tags=["movies"], response_model=List[MovieSchema]
 )
-def create_rating_for_movie(
-    movie_id: int, rating: schemas.rating.RatingCreate, db: Session = Depends(get_db)
+def search_movies(search_str: str, db: Session = Depends(get_db)):
+    movies = crud_movies.search_movies_by_title(db=db, search_string=search_str)
+    return movies
+
+
+@app.post("/movies/rate/", tags=["ratings"], response_model=RatingSchema)
+def rate_movie(
+    req_rating: RatingCreateSchema, db: Session = Depends(get_db)
 ):
-    return crud.rates.create_user_rating(db=db, rating=rating, movie_id=movie_id)
+    return crud_rates.apply_user_rating(db=db, req_rating=req_rating)
 
 
 @app.get("/test", tags=["test"])
@@ -117,31 +128,13 @@ async def test_post_no_protected():
 
 @app.get("/protected", dependencies=[Depends(JWTBearer())], tags=["test"])
 async def test_protected():
+    # xx = JWTBearer.get_user()
     return {"dump": "GET: something protected"}
 
 
 @app.post("/protected", dependencies=[Depends(JWTBearer())], tags=["test"])
 async def test_protected():
     return {"dump": "POST: something protected"}
-
-
-# @app.post("/users/{user_id}/items/", response_model=schemas.Item)
-# def create_item_for_user(
-#         user_id: int,
-#         item: schemas.ItemCreate,
-#         db: Session = Depends(get_db)
-# ):
-#     return crud.create_user_item(db=db, item=item, user_id=user_id)
-#
-#
-# @app.get("/items/", response_model=List[schemas.Item])
-# def read_items(
-#         skip: int = 0,
-#         limit: int = 100,
-#         db: Session = Depends(get_db)
-# ):
-#     items = crud.get_items(db, skip=skip, limit=limit)
-#     return items
 
 
 if __name__ == "__main__":

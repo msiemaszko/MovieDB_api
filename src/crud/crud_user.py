@@ -41,4 +41,4 @@ class CRUDUser:
         return db_user
 
 
-user = CRUDUser()
+crud_user = CRUDUser()
