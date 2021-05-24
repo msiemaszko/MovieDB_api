@@ -35,7 +35,6 @@ def hash_password(password: str) -> str:
     """
     return password + "notreallyhashed"
 
-
 # def token_response(token: str):
 #     """ helper function for returning generated tokens """
 #     return {

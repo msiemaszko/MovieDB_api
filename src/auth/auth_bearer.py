@@ -5,17 +5,14 @@ from .auth_handler import decode_jwt
 
 
 class JWTBearer(HTTPBearer):
-    """
-    that class will be used to persist authentication on our routes
-    """
+    """ that class will be used to persist authentication on our routes """
 
     def __init__(self, auto_error: bool = True):
         super(JWTBearer, self).__init__(auto_error=auto_error)
+        self.payload = None
 
     async def __call__(self, request: Request):
-        credentials: HTTPAuthorizationCredentials = await super(
-            JWTBearer, self
-        ).__call__(request)
+        credentials: HTTPAuthorizationCredentials = await super(JWTBearer, self).__call__(request)
         if credentials:
             if not credentials.scheme == "Bearer":
                 raise HTTPException(
@@ -27,7 +24,8 @@ class JWTBearer(HTTPBearer):
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Invalid token or expired token.",
                 )
-            return credentials.credentials
+            # return credentials.credentials
+            return self
         else:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -36,8 +34,14 @@ class JWTBearer(HTTPBearer):
 
     def verify_jwt(self, jwt_token: str) -> bool:
         try:
-            decode_jwt(jwt_token)
+            payload = decode_jwt(jwt_token)
         except:
-            return False
-        finally:
+            payload = None
+
+        if payload:
+            self.payload = payload
             return True
+        return False
+
+    def get_payload(self):
+        return self.payload
