@@ -3,17 +3,14 @@ from typing import List
 import uvicorn
 from fastapi import Body, Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from src.auth import JWTBearer, hash_password, sign_jwt
 from src.crud import crud_movies, crud_rates, crud_user
-from src.database import db_base, db_engine, db_session, get_db
-from src.models import Movie, Rating, User
+from src.database import db_base, db_engine, get_db
 from src.schemas.movie import MovieSchema
 from src.schemas.rating import RatingCreateSchema, RatingSchema
-from src.schemas.user import (UserCreateSchema, UserLoginSchema, UserSchema,
-                              UserTokenizedSchema)
+from src.schemas.user import (UserCreateSchema, UserLoginSchema, UserSchema, UserTokenizedSchema)
 
 # Apply migrations to db and populate it
 db_base.metadata.create_all(bind=db_engine)
@@ -32,55 +29,54 @@ app.add_middleware(
 
 
 @app.post("/signup", tags=["user"], response_model=UserTokenizedSchema)
-def create_user(user: UserCreateSchema, db: Session = Depends(get_db)):
+async def create_user(user: UserCreateSchema, db: Session = Depends(get_db)):
     """POST: Register new user"""
     db_user = crud_user.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
-    new_user = crud_user.create_user(db=db, new_user=user)
-    if new_user:
-        token = sign_jwt(new_user.email).access_token
-        user = {
-            "id": new_user.id,
-            "full_name": new_user.full_name,
-            "email": new_user.email,
-        }
-        return UserTokenizedSchema(user=user, access_token=token)
-        # return signJWT(new_user.email)
+
+    try:
+        new_user = crud_user.create_user(db=db, new_user=user)
+        if new_user:
+            token = sign_jwt(new_user.email).access_token
+            user = UserSchema.from_orm(new_user)
+            logged_user = UserTokenizedSchema(user=user, access_token=token)
+            return logged_user
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Registration error"
+        )
 
 
 @app.post("/login", tags=["user"], response_model=UserTokenizedSchema)
 async def user_login(
-    user: UserLoginSchema = Body(...),
-    db: Session = Depends(get_db)
+        user: UserLoginSchema = Body(...),
+        db: Session = Depends(get_db)
 ):
     # """ GET: Return all user """
     db_user = crud_user.get_user_by_email(db, email=user.email)
     if db_user:
         if db_user.hashed_password == hash_password(user.password):
             token = sign_jwt(user.email).access_token
-            user = {
-                "id": db_user.id,
-                "full_name": db_user.full_name,
-                "email": db_user.email,
-            }
-            return UserTokenizedSchema(user=user, access_token=token)
+            user = UserSchema.from_orm(db_user)
+            logged_user = UserTokenizedSchema(user=user, access_token=token)
+            return logged_user
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST, detail="Wrong login details!"
     )
 
 
 @app.get("/users", tags=["user"], response_model=List[UserSchema])
-def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+async def read_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """GET: Return all user with pagination arguments"""
     users = crud_user.get_users(db, skip=skip, limit=limit)
     return users
 
 
 @app.get("/users/{user_id}", tags=["user"], response_model=UserSchema)
-def read_user(user_id: int, db: Session = Depends(get_db)):
+async def read_user(user_id: int, db: Session = Depends(get_db)):
     """GET: Return specific user by id"""
     db_user = crud_user.get_payload(db, user_id=user_id)
     if db_user is None:
@@ -90,34 +86,37 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
     return db_user
 
 
-@app.get("/ratings/", tags=["ratings"], response_model=List[RatingSchema])
-def read_ratings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    ratings = crud_rates.get_ratings(db)
-    return ratings
+@app.get("/movies/{movie_id}", tags=["movies"], response_model=MovieSchema)
+async def read_movie_with_rating(
+        movie_id: int,
+        token: JWTBearer = Depends(JWTBearer()),
+        db: Session = Depends(get_db)
+):
+    """ Get specific movie by id with user rate """
+    user = crud_user.get_user_from_payload(payload=token.get_payload(), db=db)
+    movie_tuple = crud_movies.get_movie_with_rate(db, movie_id, user.id)
+
+    # convert tuple to movie schema
+    i_movie, i_rate = movie_tuple
+    movie = MovieSchema.from_orm(i_movie)
+    movie.user_rating = i_rate
+    return movie
 
 
 @app.get("/movies/", tags=["movies"], response_model=List[MovieSchema])
-def read_movies(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    movies = crud_movies.get_movies(db=db, skip=skip, limit=limit)
-    return movies
-
-
-# @app.get("/movies/{searchStr}", tags=["movies"], response_model=List[MovieSchema])
-# def search_movies(search_str: str, db: Session = Depends(get_db)):
-#     movies = crud_movies.search_movies_by_title(db=db, search_string=search_str)
-#     return movies
+async def read_movies(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """ Get list of movies """
+    return crud_movies.get_movies(db=db, skip=skip, limit=limit)
 
 
 @app.get("/movies/search/{search_str}", tags=["movies"], response_model=List[MovieSchema])
-def search_movies_with_rate(
+async def search_movies_with_rates_attached(
         search_str: str,
-        token_object: JWTBearer = Depends(JWTBearer()),
+        token: JWTBearer = Depends(JWTBearer()),
         db: Session = Depends(get_db)
 ):
-    """ searches for movies by title with user ratings attached """
-    payload = token_object.get_payload()
-    user_email = payload['user_id']
-    user = crud_user.get_user_by_email(db, user_email)
+    """ Searches for movies by title with user ratings attached """
+    user = crud_user.get_user_from_payload(db=db, payload=token.get_payload())
     movies_rate_tuple = crud_movies.search_movies_by_title_with_rate(db=db, search_string=search_str, user_id=user.id)
 
     # convert list of tuple to list with movie schemas
@@ -131,11 +130,24 @@ def search_movies_with_rate(
 
 
 @app.post("/movies/rate/", tags=["ratings"], dependencies=[Depends(JWTBearer())], response_model=RatingSchema)
-def rate_movie(req_rating: RatingCreateSchema, db: Session = Depends(get_db)):
+async def rate_movie(req_rating: RatingCreateSchema, db: Session = Depends(get_db)):
     """ Create or update user rating for specific movie """
     return crud_rates.apply_user_rating(db=db, req_rating=req_rating)
 
 
+# @app.get("/movies/{searchStr}", tags=["movies"], response_model=List[MovieSchema])
+# def search_movies(search_str: str, db: Session = Depends(get_db)):
+#     movies = crud_movies.search_movies_by_title(db=db, search_string=search_str)
+#     return movies
+
+
+# @app.get("/ratings/", tags=["ratings"], response_model=List[RatingSchema])
+# def read_ratings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+#     ratings = crud_rates.get_ratings(db)
+#     return ratings
+
+
+# TESTOWE !!!
 @app.get("/test", tags=["test"])
 async def test_get_no_protected():
     return {"dump": "GET: no protected dump"}
@@ -158,8 +170,8 @@ async def test_protected_user(
         db: Session = Depends(get_db)
 ):
     payload = token_object.get_payload()
-    user = db.query(User).filter(User.email == payload['user_id']).first()
-
+    # user = db.query(User).filter(User.email == payload['user_id']).first()
+    user = crud_user.get_user_from_payload(db=db, payload=payload)
     return {'AUTORIZED_user': user, 'test_string': test}
 
 

@@ -9,11 +9,7 @@ from src.schemas.user import UserCreateSchema
 
 class CRUDUser:
     def get_user(self, db: Session, user_id: int) -> Optional[User]:
-        """
-        Return user based on primary key
-        Returns:
-            user: user object
-        """
+        """ Return user based on primary key """
         try:
             return db.query(User).filter(User.id == user_id).first()
         except:
@@ -22,6 +18,10 @@ class CRUDUser:
     def get_user_by_email(self, db: Session, email: str) -> User:
         """Return user based on email"""
         return db.query(User).filter(User.email == email).first()
+
+    def get_user_from_payload(self, db: Session, payload: dict):
+        user_email = payload['user_id']
+        return self.get_user_by_email(db, user_email)
 
     def get_users(self, db: Session, skip: int = 0, limit: int = 100) -> List[User]:
         """Return list of users with pagination arguments"""

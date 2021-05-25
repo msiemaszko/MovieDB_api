@@ -13,7 +13,7 @@ class UserBaseSchema(BaseModel):
 class UserSchema(UserBaseSchema):
     id: int
     is_active: bool
-    rates: List[RatingSchema] = []
+    # rates: List[RatingSchema] = []
 
     class Config:
         orm_mode = True
@@ -30,5 +30,5 @@ class UserLoginSchema(BaseModel):
 
 
 class UserTokenizedSchema(BaseModel):
-    user: Optional[dict]
-    access_token: Optional[str]
+    user: UserSchema
+    access_token: str
