@@ -3,8 +3,6 @@ from typing import List, Optional
 from pydantic import BaseModel, EmailStr, Field
 from pydantic.schema import date
 
-from src.schemas.rating import RatingSchema
-
 
 class MovieSchema(BaseModel):
     id: int
@@ -15,7 +13,7 @@ class MovieSchema(BaseModel):
     overview: Optional[str]
     vote_average: Optional[float]
     vote_count: Optional[int]
-    user_rate: Optional[RatingSchema]
+    user_rating: Optional[float]
 
     # rates: List[Rating] = []
 

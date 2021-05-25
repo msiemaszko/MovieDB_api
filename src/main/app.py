@@ -102,62 +102,37 @@ def read_movies(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return movies
 
 
-@app.get("/movies/{searchStr}", tags=["movies"], response_model=List[MovieSchema])
-def search_movies(search_str: str, db: Session = Depends(get_db)):
-    movies = crud_movies.search_movies_by_title(db=db, search_string=search_str)
-    return movies
+# @app.get("/movies/{searchStr}", tags=["movies"], response_model=List[MovieSchema])
+# def search_movies(search_str: str, db: Session = Depends(get_db)):
+#     movies = crud_movies.search_movies_by_title(db=db, search_string=search_str)
+#     return movies
 
-@app.get("/movies_vote/{searchStr}", tags=["movies"], response_model=List[MovieSchema])
+
+@app.get("/movies/search/{search_str}", tags=["movies"], response_model=List[MovieSchema])
 def search_movies_with_rate(
         search_str: str,
-        db: Session = Depends(get_db),
-        # token_object: JWTBearer = Depends(JWTBearer())
+        token_object: JWTBearer = Depends(JWTBearer()),
+        db: Session = Depends(get_db)
 ):
-    # payload = token_object.get_payload()
-    # user_email = payload['user_id']
-    # user = crud_user.get_user_by_email(db, user_email)
-    # movies = crud_movies.search_movies_by_title_with_rate(db=db, search_string=search_str, user_id=user.id)
+    """ searches for movies by title with user ratings attached """
+    payload = token_object.get_payload()
+    user_email = payload['user_id']
+    user = crud_user.get_user_by_email(db, user_email)
+    movies_rate_tuple = crud_movies.search_movies_by_title_with_rate(db=db, search_string=search_str, user_id=user.id)
+
+    # convert list of tuple to list with movie schemas
+    movies_with_user_rate = []
+    for i_movie, i_rate in movies_rate_tuple:
+        movie = MovieSchema.from_orm(i_movie)
+        movie.user_rating = i_rate
+        movies_with_user_rate.append(movie)
+
+    return movies_with_user_rate
 
 
-    # movies = db.query(Rating).join(User).all()
-    # movies = db.query(Rating).join(User).filter(User.id == 1).all()
-    #
-    # movies = db.query(Movie).join(Rating).all()
-    st1 = db.query(Movie).join(Rating).filter(Rating.user_id == 1).all()
-
-
-    # .filter(Movie.title.contains('toy'))\
-    # .join(Rating.rating, and_(Rating.movie_id == Movie.id, Rating.user_id == 1))\
-    my_user_id = 1
-    st2 = db.query(Movie)\
-        .outerjoin(Rating, Rating.user_id == my_user_id)\
-        .all()
-
-    st3 = db.query(Movie).join(Rating, Rating.user_id == my_user_id, isouter=True).all()
-    st4 = db.query(Movie).join(Rating).filter(Rating.user_id == my_user_id).all
-
-    query = db.query(Movie.title, Rating.rating).outerjoin(Rating, Rating.user_id == my_user_id)
-    query2 = db.query(Movie.title, Rating.rating).outerjoin(Rating, and_(Rating.movie_id == Movie.id, Rating.user_id == my_user_id))
-    query25 = db.query(Movie.id, Movie.imdb_id, Movie.title, Movie.genres, Movie.release_date, Movie.overview, Movie.vote_count, Movie.vote_average, Rating.rating.label('user_rate')).outerjoin(Rating, and_(Rating.movie_id == Movie.id, Rating.user_id == my_user_id))
-    query3 = db.query(Movie, Rating.rating).outerjoin(Rating, and_(Rating.movie_id == Movie.id, Rating.user_id == my_user_id))
-    query35 = db.query(Movie, Rating.rating.label('user_rate')).outerjoin(Rating, and_(Rating.movie_id == Movie.id, Rating.user_id == my_user_id))
-    query4 = db.query(Movie).outerjoin(Rating, Rating.user_id == my_user_id)
-
-    q1 = query.all()
-    q2 = query2.all()
-    q25 = query25.all()
-    q3 = query3.all()
-    q35 = query35.all()
-    q4 = query4.all()
-    # .filter(Rating.user_id == my_user_id)\
-
-    xx = st3 #[1].ratings
-
-    return q25
-
-
-@app.post("/movies/rate/", tags=["ratings"], response_model=RatingSchema)
+@app.post("/movies/rate/", tags=["ratings"], dependencies=[Depends(JWTBearer())], response_model=RatingSchema)
 def rate_movie(req_rating: RatingCreateSchema, db: Session = Depends(get_db)):
+    """ Create or update user rating for specific movie """
     return crud_rates.apply_user_rating(db=db, req_rating=req_rating)
 
 
@@ -176,10 +151,16 @@ async def test_protected():
     return {"dump": "GET: something protected"}
 
 
-@app.get("/protected/user", tags=["test"])
-async def test_protected_user(token_object : JWTBearer = Depends(JWTBearer())):
+@app.get("/protected/user/{test}", tags=["test"])
+async def test_protected_user(
+        test: str,
+        token_object: JWTBearer = Depends(JWTBearer()),
+        db: Session = Depends(get_db)
+):
     payload = token_object.get_payload()
-    return {"decrypted_user": payload}
+    user = db.query(User).filter(User.email == payload['user_id']).first()
+
+    return {'AUTORIZED_user': user, 'test_string': test}
 
 
 @app.post("/protected", dependencies=[Depends(JWTBearer())], tags=["test"])
@@ -188,5 +169,5 @@ async def test_protected():
 
 
 if __name__ == "__main__":
-    # uvicorn.run(app, host=DEFAULT_HOST, port=DEFAULT_HOST_PORT)
     uvicorn.run("app:app", host="localhost", port=5000, reload=True, log_level="info")
+    # uvicorn.run(app, host=DEFAULT_HOST, port=DEFAULT_HOST_PORT)

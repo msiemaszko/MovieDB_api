@@ -1,5 +1,6 @@
 from typing import List, Optional
 
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from src.models import Rating
@@ -17,11 +18,12 @@ class CRUDMovie:
         return movies
 
     def search_movies_by_title_with_rate(self, db: Session, search_string: str, user_id: int):
-        movies = db.query(Movie)\
-            .join(Rating)\
+        movies_rate_tuple = db.query(Movie, Rating.rating)\
             .filter(Movie.title.contains(search_string))\
-            .filter(Rating.user_id == user_id)\
+            .outerjoin(Rating, and_(Rating.movie_id == Movie.id, Rating.user_id == user_id))\
             .all()
-        return movies
+        return movies_rate_tuple
+            # .outerjoin(Rating, Rating.user_id == user_id)\
+
 
 crud_movies = CRUDMovie()
