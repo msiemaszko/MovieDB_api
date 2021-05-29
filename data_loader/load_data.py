@@ -1,115 +1,119 @@
-from time import time
+from ast import literal_eval
 
-from get_data import read_clear_movies, read_rating, read_users
+import pandas as pd
 
-from src.database import db_base, db_engine, db_session
-from src.models.movie import Movie
-from src.models.rating import Rating
-from src.models.user import User
-
-# Apply migrations to db and populate it
-db_base.metadata.create_all(bind=db_engine)
-now = time()
-
-### USERS
-(row_succes, row_error) = (0, 0)
-ses = db_session()
-data = read_users().values
-for i in data:
-    try:
-        record = User(
-            **{
-                "id": i[0],
-                "full_name": i[1],
-                "email": i[2],
-                "hashed_password": i[3],
-                "is_active": i[4],
-            }
-        )
-        ses.add(record)
-        ses.commit()
-        row_succes += 1
-    except:
-        ses.rollback()
-        ses = db_session()
-        row_error += 1
-ses.close()
-print(f"User result: succes: {row_succes}, faild: {row_error}")
-
-### MOVIES
-(row_succes, row_error) = (0, 0)
-ses = db_session()
-data = read_clear_movies().values
-for i in data:
-    try:
-        record = Movie(
-            **{
-                "id": i[0],
-                "imdb_id": i[1],
-                "title": i[2],
-                "genres": i[3],
-                "release_date": i[4],
-                "overview": i[5],
-                "vote_average": i[6],
-                "vote_count": i[7],
-                "poster_path": i[8],
-            }
-        )
-        ses.add(record)
-        ses.commit()
-        row_succes += 1
-    except:
-        ses.rollback()
-        ses = db_session()
-        row_error += 1
-ses.close()
-print(f"Movie result: succes: {row_succes}, faild: {row_error}")
+from data_loader.dump_params import *
 
 
-### RATING
-(row_succes, row_error) = (0, 0)
-ses = db_session()
-data = read_rating().values
-for i in data:
-    try:
-        record = Rating(
-            **{"user_id": i[0], "movie_id": i[1], "rating": i[2], "time_stamp": i[3]}
-        )
-        ses.add(record)
-        ses.commit()
-        row_succes += 1
-    except:
-        row_error += 1
-        ses.rollback()
-        ses = db_session()
-ses.close()
-print(f"Rating result: succes: {row_succes}, faild: {row_error}")
+def read_clear_movies(file_path: str):
+    df = pd.read_csv(file_path)
+        # , sep=",",
+        # usecols=moviesMetadataUsecols,
+        # date_parser=pd.datetools.to_datetime,
+        # dtype={
+        #         # 'adult': 'bool',
+        #        # 'belongs_to_collection': 'object',
+        #        # 'budget': 'int64',
+        #        'genres': 'object',
+        #        # 'homepage': 'object',
+        #        'id': 'int64',
+        #        'imdb_id': 'string',
+        #        # 'original_language': 'string',
+        #        # 'original_title': 'string',
+        #        'overview': 'string',
+        #        'popularity': 'float64',
+        #        # 'poster_path': 'object',
+        #        # 'production_companies': 'object',
+        #        # 'production_countries': 'object',
+        #        # 'release_date': 'date',
+        #        # 'revenue': 'float64',
+        #        # 'runtime': 'float64',
+        #        # 'spoken_languages': 'object',
+        #        # 'status': 'object',
+        #        # 'tagline': 'string',
+        #        # 'title': 'string',
+        #        # 'video': 'object',
+        #        # 'vote_average': 'float64',
+        #        # 'vote_count': 'float64'
+        # }
 
-print("Time elapsed: " + str(time() - now) + " s.")
+    df = pd.DataFrame(df, columns=movies_metadata_use_cols) # filter and order columns
+
+    df = df.drop_duplicates(keep='first')  # removes the duplicates
+    df.dropna(how="all", inplace=True)  # drop empty row
+    df.dropna(subset=["title"], inplace=True) # drop rows without title
+
+    # cast types
+    df["id"] = pd.to_numeric(df['id'], errors='coerce', downcast="integer")
+    df["popularity"] = pd.to_numeric(df['popularity'], errors='coerce', downcast="float")
+    df["budget"] = pd.to_numeric(df['budget'], errors='coerce', downcast="float")
+    df['release_date'] = pd.to_datetime(df['release_date'])
+    df['release_year'] = df['release_date'].dt.year
+
+    # TODO: SPrawdzić ten order
+    df = df.sort_values("id") # sort by id
+
+    # genres transform
+    df["genres"] = (
+        df["genres"]
+        .fillna("[]")
+        .apply(literal_eval)
+        .apply(lambda x: [i["name"] for i in x] if isinstance(x, list) else [])
+    )
+    df["genres"] = df["genres"].str.join("|")
+
+    # print(df.iloc[0])
+
+    # df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce').apply(lambda x: x.date())
+
+    # dodaj rok do tytułu
+    # df["release_date"] = df["release_date"].apply(pd.to_datetime) if df["release_date"] else None
+    # df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce')
+    # df["year"] = pd.DatetimeIndex(df["release_date"]).year
+    # df["title"] = df["title"] + " (" + df["year"].astype(str) + ")"
+
+    # df.drop('release_date', axis='columns', inplace=True);
+    # df.drop("year", axis="columns", inplace=True)
+    return df
 
 
-# MOVIE COPY
-# try:
-#     ses = db_session()
-#     dump = read_clear_movies()
-#     dump = dump.values
+def read_rating(file_path: str):
+    df = pd.read_csv(file_path)
+    return df
+
+
+def read_users(file_path: str):
+    df = pd.read_csv(file_path, sep=",")
+    return df
+
+
+# pp = read_clear_movies("movies_metadata_top10.csv")
+# pp = pp.values
+# print(pp[6])
+
+
+# from datetime import datetime
+# print(type(pp[4]))
+# xx = datetime.strptime(pp[4], '%d-%b-%y %h:%m:%s').date()
+# print(xx)
+
+
+# conn = mysql.connector.connect(user='root', password='password', host='127.0.0.1', database='myappdb')
+# cursor = conn.cursor()
+# # excel_data = pd.read_excel(r'[filepath]',sep=',', quotechar='\'')
 #
-#     for i in dump:
-#         record = Movie(**{
-#             'id': i[0],
-#             'imdb_id': i[1],
-#             'title': i[2],
-#             'genres': i[3],
-#             'release_date': i[4],
-#             'overview': i[5]
-#         })
-#         ses.add(record)
+# for row in df.iterrows():
+#     testlist = row[1].values
+#     cursor.execute("INSERT INTO movies(id, title, genres)"
+#                    " VALUES('%s','%s','%s')" % tuple(testlist))
 #
-#     ses.commit()
-#     print("Movie commited");
-# except:
-#     ses.rollback()
-#     print("Movie exception:", sys.exc_info()[1])
-# finally:
-#     ses.close()
-#     print("Movie session close\n");
+# conn.commit()
+# cursor.close()
+# conn.close()
+
+
+# for (lp, row) in df.iterrows():
+#     id = row['id']
+#     genres = '|'.join(row['genres'])
+#     year =  row['release_date'].year
+#     title = row['title'] + " (" + str(year) + ")"

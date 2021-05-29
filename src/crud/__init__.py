@@ -1,3 +1,4 @@
-from .crud_movie import crud_movies
-from .crud_rates import crud_rates
+from .crud_movie import crud_movie
+from .crud_rate import crud_rate
 from .crud_user import crud_user
+from .crud_movie import crud_movie
