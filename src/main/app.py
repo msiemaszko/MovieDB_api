@@ -24,6 +24,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost",
         "http://localhost:3000",
+        "*" # fck the cors
     ],
     allow_credentials=True,
     allow_methods=["*"],
