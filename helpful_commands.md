@@ -32,8 +32,8 @@ black .
 
 # docker 
 ```ps
-docker build --tag marekprezes/moviedb .
-docker run --rm marekprezes/moviedb sleep 10000 # for debug
-docker run --rm --publish 5000:5000 marekprezes/moviedb
+docker build --tag marekprezes/moviedb_fast .
+docker run --rm marekprezes/moviedb_fast sleep 10000 # for debug
+docker run --rm --publish 5000:5000 marekprezes/moviedb_fast
 ```
 

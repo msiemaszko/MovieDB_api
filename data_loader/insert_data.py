@@ -69,7 +69,6 @@ for i in data:
 ses.close()
 print(f"Movie result: success: {row_success}, failed: {row_error}")
 
-
 # ## RATING ##
 (row_success, row_error) = (0, 0)
 ses = db_session()
@@ -90,7 +89,6 @@ ses.close()
 print(f"Rating result: success: {row_success}, failed: {row_error}")
 
 print("Time elapsed: " + str(time() - now) + " s.")
-
 
 # MOVIE COPY
 # try:

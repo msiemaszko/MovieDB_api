@@ -1,4 +1,3 @@
-from src.models import movie
 from typing import List
 
 import uvicorn
@@ -24,7 +23,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost",
         "http://localhost:3000",
-        "*" # fck the cors
+        "*"  # fck the cors
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -103,9 +102,9 @@ async def read_movie_with_rating(
     if movie_tuple:
         # convert tuple to movie schema
         i_movie, i_rate = movie_tuple
-        movie = MovieSchema.from_orm(i_movie)
-        movie.user_rating = i_rate
-        return movie
+        db_movie = MovieSchema.from_orm(i_movie)
+        db_movie.user_rating = i_rate
+        return db_movie
     else:
         return None
         # TODO: Sprawdzić to None
@@ -125,7 +124,8 @@ async def search_movies_with_rates_attached(
 ):
     """ Searches for movies by title with user ratings attached """
     user = crud_user.get_user_from_payload(db=db, payload=token.get_payload())
-    movies_rate_tuple = crud_movie.search_movies_by_title_with_rate(db=db, search_string=search_str, user_id=user.id)
+    movies_rate_tuple = await crud_movie.search_movies_by_title_with_rate(db=db, search_string=search_str,
+                                                                          user_id=user.id)
 
     # convert list of tuple to list with movie schemas
     movies_with_user_rate = []
@@ -143,24 +143,28 @@ async def rate_movie(req_rating: RatingCreateSchema, db: Session = Depends(get_d
     return crud_rate.apply_user_rating(db=db, req_rating=req_rating)
 
 
-@app.get("/recommendation/{count}", tags=["recommendation"])
-async def get_recommendation(
-        count: int,
-        token: JWTBearer = Depends(JWTBearer()),
-        db: Session = Depends(get_db)
-):
+@app.get("/recommend/similar/{movie_id}", tags=["recommendation"])
+async def get_recommendation_for_specific_movie(movie_id: int, db: Session = Depends(get_db)):
+    """ Return recommendation list based on similarity for specific movie """
+    movie_count = 10
+    recommended_list = service_recommend.get_recommended(db=db, movie_id=movie_id, count=movie_count)
+    return crud_movie.get_movies_by_list_id(db=db, movie_id_list=recommended_list)
+
+
+@app.get("/recommend/last_watched", tags=["recommendation"])
+async def get_recommendation(count: int, token: JWTBearer = Depends(JWTBearer()), db: Session = Depends(get_db)):
+    """ Return recommendation list based on similarity for last watched movie by user """
     user = crud_user.get_user_from_payload(db=db, payload=token.get_payload())
     latest_watched_movie_id = crud_movie.latest_movie_id_watched_by_user(db=db, user_id=user.id)
     recommended_list = service_recommend.get_recommended(db=db, movie_id=latest_watched_movie_id, count=count)
 
     latest_watched_movie = crud_movie.get_movie(db=db, movie_id=latest_watched_movie_id)
-    recommended_list = crud_movie.get_movies_by_list_id(db=db, movie_id_list=recommended_list)
+    recommended_list = await crud_movie.get_movies_by_list_id(db=db, movie_id_list=recommended_list)
 
     return {
         'latest_movie': latest_watched_movie,
         'recommended_list': recommended_list
     }
-
 
 
 # @app.get("/movies/{searchStr}", tags=["movies"], response_model=List[MovieSchema])
@@ -206,22 +210,6 @@ async def test_protected_user(
 @app.post("/protected", dependencies=[Depends(JWTBearer())], tags=["test"])
 async def test_protected():
     return {"dump": "POST: something protected"}
-
-
-from src.services.omdb import load_data_from_omdb
-
-id_list = [
-'tt0009968',
-'tt0010323',
-'tt0013442',
-'tt0013427'
-]
-
-@app.get('/')
-async def f():
-    # start = time()
-    result = await load_data_from_omdb(id_list)
-    return result
 
 
 if __name__ == "__main__":

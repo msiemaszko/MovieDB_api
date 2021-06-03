@@ -51,7 +51,7 @@ def read_clear_movies(file_path: str):
     df['release_year'] = df['release_date'].dt.year
 
     # TODO: SPrawdzić ten order
-    df = df.sort_values("id") # sort by id
+    df = df.sort_values("id")  # sort by id
 
     # genres transform
     df["genres"] = (
