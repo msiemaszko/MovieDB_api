@@ -37,20 +37,20 @@ def read_clear_movies(file_path: str):
         #        # 'vote_count': 'float64'
         # }
 
-    df = pd.DataFrame(df, columns=movies_metadata_use_cols) # filter and order columns
+    df = pd.DataFrame(df, columns=movies_metadata_use_cols)  # filter and order columns
 
     df = df.drop_duplicates(keep='first')  # removes the duplicates
-    df.dropna(how="all", inplace=True)  # drop empty row
-    df.dropna(subset=["title"], inplace=True) # drop rows without title
+    df.dropna(how='all', inplace=True)  # drop empty row
+    df.dropna(subset=['title'], inplace=True)  # drop rows without title
 
     # cast types
-    df["id"] = pd.to_numeric(df['id'], errors='coerce', downcast="integer")
-    df["popularity"] = pd.to_numeric(df['popularity'], errors='coerce', downcast="float")
-    df["budget"] = pd.to_numeric(df['budget'], errors='coerce', downcast="float")
+    df['id'] = pd.to_numeric(df['id'], errors='coerce', downcast='integer')
+    df['popularity'] = pd.to_numeric(df['popularity'], errors='coerce', downcast='float')
+    df['budget'] = pd.to_numeric(df['budget'], errors='coerce', downcast='float')
     df['release_date'] = pd.to_datetime(df['release_date'])
     df['release_year'] = df['release_date'].dt.year
 
-    # TODO: SPrawdzić ten order
+    # TODO: sprawdzić ten order
     df = df.sort_values("id")  # sort by id
 
     # genres transform
@@ -76,6 +76,10 @@ def read_clear_movies(file_path: str):
     # df.drop("year", axis="columns", inplace=True)
     return df
 
+def reduce_movies_columns(data_frame):
+    data_frame = data_frame.rename(columns={"id": "movieId", "vote_average": "vote"})
+    data_frame = pd.DataFrame(data_frame, columns=["movieId", "title", "genres", "vote"])
+    return data_frame
 
 def read_rating(file_path: str):
     df = pd.read_csv(file_path)
@@ -85,6 +89,8 @@ def read_rating(file_path: str):
 def read_users(file_path: str):
     df = pd.read_csv(file_path, sep=",")
     return df
+
+
 
 
 # pp = read_clear_movies("movies_metadata_top10.csv")

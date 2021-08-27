@@ -4,12 +4,7 @@ from sqlalchemy import and_, func, desc
 from sqlalchemy.orm import Session
 
 from src.models import Rating, User
-from src.models import movie
 from src.models.movie import Movie
-
-import pandas as pd
-
-from src.services.omdb import load_data_from_omdb
 
 
 class CRUDMovie:
@@ -38,9 +33,9 @@ class CRUDMovie:
 
     async def search_movies_by_title_with_rate(self, db: Session, search_string: str, user_id: int) -> List[dict]:
         return db.query(Movie, Rating.rating) \
-            .filter(Movie.title.contains(search_string)) \
+            .filter(Movie.title.ilike(f'%{search_string}%')) \
             .outerjoin(Rating, and_(Rating.movie_id == Movie.id, Rating.user_id == user_id)) \
-            .limit(100) \
+            .limit(1000) \
             .all()
 
     def latest_movie_id_watched_by_user(self, db: Session, user_id: int) -> int:

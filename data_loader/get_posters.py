@@ -38,4 +38,10 @@ async def update_posters_url(movies_count: int):
         print("Nothing to update.. :)")
 
 
-asyncio.run(update_posters_url(100))
+def update_posters():
+    print("Updating posters from remote API: ")
+    asyncio.run(update_posters_url(250))
+
+
+if __name__ == "__main__":
+    update_posters()

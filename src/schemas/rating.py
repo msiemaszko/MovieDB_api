@@ -1,5 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
-
+from pydantic import BaseModel
 
 class RatingCreateSchema(BaseModel):
     movie_id: int

@@ -1,7 +1,5 @@
-from sqlalchemy import (Column, Float, ForeignKey, Integer, String,
-                        UniqueConstraint)
+from sqlalchemy import (Column, Float, ForeignKey, Integer, String, UniqueConstraint)
 from sqlalchemy.orm import relationship
-
 from src.database import db_base
 
 

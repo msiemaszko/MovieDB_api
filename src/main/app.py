@@ -12,7 +12,7 @@ from src.schemas.movie import MovieSchema
 from src.schemas.rating import RatingCreateSchema, RatingSchema
 from src.schemas.user import (UserCreateSchema, UserLoginSchema, UserSchema, UserTokenizedSchema)
 
-from src.recommendation import service_recommend
+from src.rcmmnd import rcmmnd
 
 # Apply migrations to db and populate it
 db_base.metadata.create_all(bind=db_engine)
@@ -58,7 +58,6 @@ async def user_login(
         user: UserLoginSchema = Body(...),
         db: Session = Depends(get_db)
 ):
-    # """ GET: Return all user """
     db_user = crud_user.get_user_by_email(db, email=user.email)
     if db_user:
         if db_user.hashed_password == hash_password(user.password):
@@ -116,15 +115,15 @@ async def read_movies(skip: int = 0, limit: int = 100, db: Session = Depends(get
     return crud_movie.get_movies(db=db, skip=skip, limit=limit)
 
 
-@app.get("/movies/search/{search_str}", tags=["movies"], response_model=List[MovieSchema])
+@app.get("/movies/search/{req_search_str}", tags=["movies"], response_model=List[MovieSchema])
 async def search_movies_with_rates_attached(
-        search_str: str,
+        req_search_str: str,
         token: JWTBearer = Depends(JWTBearer()),
         db: Session = Depends(get_db)
 ):
     """ Searches for movies by title with user ratings attached """
     user = crud_user.get_user_from_payload(db=db, payload=token.get_payload())
-    movies_rate_tuple = await crud_movie.search_movies_by_title_with_rate(db=db, search_string=search_str,
+    movies_rate_tuple = await crud_movie.search_movies_by_title_with_rate(db=db, search_string=req_search_str,
                                                                           user_id=user.id)
 
     # convert list of tuple to list with movie schemas
@@ -143,23 +142,23 @@ async def rate_movie(req_rating: RatingCreateSchema, db: Session = Depends(get_d
     return crud_rate.apply_user_rating(db=db, req_rating=req_rating)
 
 
-@app.get("/recommend/similar/{movie_id}", tags=["recommendation"])
-async def get_recommendation_for_specific_movie(movie_id: int, db: Session = Depends(get_db)):
-    """ Return recommendation list based on similarity for specific movie """
-    movie_count = 10
-    recommended_list = service_recommend.get_recommended(db=db, movie_id=movie_id, count=movie_count)
-    return crud_movie.get_movies_by_list_id(db=db, movie_id_list=recommended_list)
+@app.get("/recommend/content_based/{req_movie_id}", tags=["recommendations"])
+async def get_rcm_content_based(req_movie_id: int, db: Session = Depends(get_db)):
+    """ Return rcmmnd list based on similarity for specific movie """
+    recommended_id_list = rcmmnd.content_based_filtering(movie_id=req_movie_id, no_of_movies=15)
+    recommended_movie_list = crud_movie.get_movies_by_list_id(db=db, movie_id_list=recommended_id_list)
+    return recommended_movie_list
 
 
-@app.get("/recommend/last_watched", tags=["recommendation"])
-async def get_recommendation(count: int, token: JWTBearer = Depends(JWTBearer()), db: Session = Depends(get_db)):
-    """ Return recommendation list based on similarity for last watched movie by user """
+@app.get("/recommend/content_based_last", tags=["recommendations"])
+async def get_rcm_content_based_last(token: JWTBearer = Depends(JWTBearer()), db: Session = Depends(get_db)):
+    """ Return rcmmnd list based on similarity for last watched movie by user """
     user = crud_user.get_user_from_payload(db=db, payload=token.get_payload())
     latest_watched_movie_id = crud_movie.latest_movie_id_watched_by_user(db=db, user_id=user.id)
-    recommended_list = service_recommend.get_recommended(db=db, movie_id=latest_watched_movie_id, count=count)
+    recommended_list = rcmmnd.content_based_filtering(movie_id=latest_watched_movie_id, no_of_movies=15)
 
     latest_watched_movie = crud_movie.get_movie(db=db, movie_id=latest_watched_movie_id)
-    recommended_list = await crud_movie.get_movies_by_list_id(db=db, movie_id_list=recommended_list)
+    recommended_list = crud_movie.get_movies_by_list_id(db=db, movie_id_list=recommended_list)
 
     return {
         'latest_movie': latest_watched_movie,
@@ -167,16 +166,37 @@ async def get_recommendation(count: int, token: JWTBearer = Depends(JWTBearer())
     }
 
 
-# @app.get("/movies/{searchStr}", tags=["movies"], response_model=List[MovieSchema])
-# def search_movies(search_str: str, db: Session = Depends(get_db)):
-#     movies = crud_movies.search_movies_by_title(db=db, search_string=search_str)
-#     return movies
+@app.get("/recommend/rating_based/{req_movie_id}", tags=["recommendations"])
+async def get_rcm_rating_based(req_movie_id: int, db: Session = Depends(get_db)):
+    """ Return rcmmnd list based on rating for specific movie """
+    recommended_id_list = rcmmnd.based_on_ratings(movie_id=req_movie_id, no_of_movies=15)
+    recommended_movie_list = crud_movie.get_movies_by_list_id(db=db, movie_id_list=recommended_id_list)
+    return recommended_movie_list
 
 
-# @app.get("/ratings/", tags=["ratings"], response_model=List[RatingSchema])
-# def read_ratings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-#     ratings = crud_rates.get_ratings(db)
-#     return ratings
+@app.get("/recommend/rating_based_last", tags=["recommendations"])
+async def get_rcm_rating_based_last(token: JWTBearer = Depends(JWTBearer()), db: Session = Depends(get_db)):
+    """ Return rcmmnd list based on movie rating for last watched movie by user"""
+    user = crud_user.get_user_from_payload(db=db, payload=token.get_payload())
+    latest_watched_movie_id = crud_movie.latest_movie_id_watched_by_user(db=db, user_id=user.id)
+    recommended_id_list = rcmmnd.based_on_ratings(movie_id=latest_watched_movie_id, no_of_movies=15)
+
+    latest_watched_movie = crud_movie.get_movie(db=db, movie_id=latest_watched_movie_id)
+    recommended_movie_list = crud_movie.get_movies_by_list_id(db=db, movie_id_list=recommended_id_list)
+
+    return {
+        'latest_movie': latest_watched_movie,
+        'recommended_list': recommended_movie_list
+    }
+
+
+@app.get("/recommend/collaborative_filtering", tags=["recommendations"])
+async def get_rcm_collaborative_filtering(token: JWTBearer = Depends(JWTBearer()), db: Session = Depends(get_db)):
+    """ Return rcmmnd list based on similarity between users """
+    user = crud_user.get_user_from_payload(db=db, payload=token.get_payload())
+    recommended_id_list = rcmmnd.collaborative_filtering(user_id=user.id, no_of_movies=15)
+    recommended_movie_list = crud_movie.get_movies_by_list_id(db=db, movie_id_list=recommended_id_list)
+    return recommended_movie_list
 
 
 # TESTOWE !!!

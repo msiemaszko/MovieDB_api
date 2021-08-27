@@ -1,10 +1,10 @@
 
 full_movie_csv = "data_dump/full/movies_metadata.csv"
 full_rating_csv = "data_dump/full/ratings.csv"
+full_user_csv = "data_dump/full/users.csv"
 
 reduced_movie_csv = "data_dump/reduced/movies_metadata.csv"
 reduced_rating_csv = "data_dump/reduced/ratings.csv"
-reduced_user_csv = "data_dump/reduced/users.csv"
 
 reduce_movie_id_to = 1000
 
