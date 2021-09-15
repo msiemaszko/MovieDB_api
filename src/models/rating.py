@@ -9,7 +9,7 @@ class Rating(db_base):  # children
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     rating = Column(Float)
-    time_stamp = Column(String)
+    time_stamp = Column(Integer)
 
     # relacja film: wiele oscen do jednego filmu
     movie_id = Column(Integer, ForeignKey("movies.id"))

@@ -85,3 +85,5 @@ pip-wheel-metadata
 
 *.db
 sql_app.db
+data_dump/reduced/ratings.csv
+data_dump/reduced/movies_metadata.csv

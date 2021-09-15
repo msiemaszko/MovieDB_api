@@ -1,5 +1,5 @@
 id,full_name,email,hashed_password,is_active
-1,marek marecki,mail@email.com,stringnotreallyhashed,1
+1,marek marecki,user@example.com,stringnotreallyhashed,1
 2,Jemima Garza,mollis@quama.edu,24E758DB-F2E0-88A7-DB0C-A3454FB223CC,1
 3,Kiona Cherry,in.magna@purusin.edu,B572D906-02B4-C643-04E8-BD9E3CD4F5EC,1
 4,Dahlia Humphrey,lorem@Morbiquis.ca,913816EA-99D0-0BC2-A72E-7494810E6269,1

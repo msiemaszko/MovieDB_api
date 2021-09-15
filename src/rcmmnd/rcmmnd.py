@@ -27,7 +27,6 @@ class Recommendation:
         self.rates_movies = self.movies.merge(self.ratings)
         self.count_vector, self.vectorizer, self.genres_list \
             = self.clean_feature_and_return_ndarray(self.movies["genres"])
-        self.cosine_similarity = None
 
     def clean_feature_and_return_ndarray(self, words_df):
         lemmatizer = WordNetLemmatizer()
@@ -94,6 +93,7 @@ class Recommendation:
         # klasyfikacja
         classifier = NearestNeighbors()
         classifier.fit(count_vector)
+
         nearest_users_indices = classifier.kneighbors([current_user_genres_vector], n_neighbors=10, return_distance=False)[0]
         nearest_users_indices = nearest_users_indices[1:]  # remove current user
 
@@ -125,7 +125,7 @@ class Recommendation:
         # plt_hist(movies_ratings['count'], bins=50, xlabel='liczba ocen', ylabel='ilość filmów')
         # plt_hist(movies_ratings['rating'], bins=50, xlabel='średnia ocena filmu', ylabel='ilość ocen filmu')
         # sns_jointplot(data=movies_ratings, x='rating', y='count')
-
+        # movie_index =
         df = self.rates_movies.loc[:, ["userId", "rating", "movieId"]]
         users_movie_matrix = pd.pivot_table(df, columns='movieId', index='userId', values='rating')
 

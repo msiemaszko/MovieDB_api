@@ -52,6 +52,7 @@ def read_clear_movies(file_path: str):
 
     # TODO: sprawdzić ten order
     df = df.sort_values("id")  # sort by id
+    df = df.reset_index(drop=True)
 
     # genres transform
     df["genres"] = (
@@ -61,8 +62,6 @@ def read_clear_movies(file_path: str):
         .apply(lambda x: [i["name"] for i in x] if isinstance(x, list) else [])
     )
     df["genres"] = df["genres"].str.join("|")
-
-    # print(df.iloc[0])
 
     # df['release_date'] = pd.to_datetime(df['release_date'], errors='coerce').apply(lambda x: x.date())
 
